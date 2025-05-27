@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.13;
 
-import '../interfaces/IUniswapV2Pair.sol';
-import './FixedPoint.sol';
+import "../interfaces/IUniswapV2Pair.sol";
+import "./FixedPoint.sol";
 
 // @title UniswapV2OracleLibrary
 // @notice 工具库，用于计算 Uniswap V2 交易对的累计价格并支持高效的链上时间戳获取
 library UniswapV2OracleLibrary {
-    using FixedPoint for *;  // 导入 FixedPoint 库，支持定点数运算
+    using FixedPoint for *; // 导入 FixedPoint 库，支持定点数运算
 
     /**
      * @notice 获取当前区块时间戳，并将其压缩到 uint32 范围内
@@ -26,13 +26,11 @@ library UniswapV2OracleLibrary {
      * @return price1Cumulative 累计的 token1 价格（UQ112x112 格式）
      * @return blockTimestamp 当前区块时间戳（32 位）
      */
-    function currentCumulativePrices(
-        address pair
-    ) internal view returns (
-        uint price0Cumulative,
-        uint price1Cumulative,
-        uint32 blockTimestamp
-    ) {
+    function currentCumulativePrices(address pair)
+        internal
+        view
+        returns (uint256 price0Cumulative, uint256 price1Cumulative, uint32 blockTimestamp)
+    {
         // 获取截断后的当前区块时间戳
         blockTimestamp = currentBlockTimestamp();
 
@@ -48,17 +46,9 @@ library UniswapV2OracleLibrary {
             // 计算自上次更新到当前的时间差（秒）
             uint32 timeElapsed = blockTimestamp - blockTimestampLast;
             // price0Cumulative 增加：reserve1/reserve0（UQ112x112）乘以时间差
-            price0Cumulative += uint(
-                FixedPoint
-                    .fraction(reserve1, reserve0)
-                    ._x
-            ) * timeElapsed;
+            price0Cumulative += uint256(FixedPoint.fraction(reserve1, reserve0)._x) * timeElapsed;
             // price1Cumulative 增加：reserve0/reserve1（UQ112x112）乘以时间差
-            price1Cumulative += uint(
-                FixedPoint
-                    .fraction(reserve0, reserve1)
-                    ._x
-            ) * timeElapsed;
+            price1Cumulative += uint256(FixedPoint.fraction(reserve0, reserve1)._x) * timeElapsed;
         }
     }
 }

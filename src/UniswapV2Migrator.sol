@@ -35,64 +35,42 @@ contract UniswapV2Migrator {
     /// @param amountETHMin   在 V2 添加流动性时，最少要接受的 ETH 数量（用于滑点保护）
     /// @param to             V2 上 LP 代币的接收地址
     /// @param deadline       交易截止时间戳，超时则 revert
-    function migrate(
-        address token,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline
-    ) external {
+    function migrate(address token, uint256 amountTokenMin, uint256 amountETHMin, address to, uint256 deadline)
+        external
+    {
         // 1. 查询用户在 V1 对应 token 的 Exchange 合约
-        IUniswapV1Exchange exchangeV1 = IUniswapV1Exchange(
-            factoryV1.getExchange(token)
-        );
+        IUniswapV1Exchange exchangeV1 = IUniswapV1Exchange(factoryV1.getExchange(token));
 
         // 2. 查询用户在该 V1 Exchange 持有的 LP 数量
-        uint liquidityV1 = exchangeV1.balanceOf(msg.sender);
+        uint256 liquidityV1 = exchangeV1.balanceOf(msg.sender);
 
         // 3. 将用户所有 V1 LP token 转移到本合约
         //    用户须提前 approve 本合约花费其 V1 LP
-        require(
-            exchangeV1.transferFrom(msg.sender, address(this), liquidityV1),
-            "TRANSFER_FROM_FAILED"
-        );
+        require(exchangeV1.transferFrom(msg.sender, address(this), liquidityV1), "TRANSFER_FROM_FAILED");
 
         // 4. 在 V1 上移除流动性，换回 ETH 和 ERC20
         //    这里 min 参数设为 1，deadline 设为 uint.max，滑点基本无忧
-        (uint amountETHV1, uint amountTokenV1) = exchangeV1.removeLiquidity(
-            liquidityV1,
-            1,
-            1,
-            type(uint).max
-        );
+        (uint256 amountETHV1, uint256 amountTokenV1) = exchangeV1.removeLiquidity(liquidityV1, 1, 1, type(uint256).max);
 
         // 5. 授权 V2 Router 可以花费合约持有的 V1 换回的 token
         TransferHelper.safeApprove(token, address(router), amountTokenV1);
 
         // 6. 在 V2 上添加流动性（ETH + token），并获取实际消耗的数据
         //    addLiquidityETH 会将 value(ETH) 和 token 一起加入池子
-        (uint amountTokenV2, uint amountETHV2, ) = router.addLiquidityETH{
-            value: amountETHV1
-        }(token, amountTokenV1, amountTokenMin, amountETHMin, to, deadline);
+        (uint256 amountTokenV2, uint256 amountETHV2,) =
+            router.addLiquidityETH{value: amountETHV1}(token, amountTokenV1, amountTokenMin, amountETHMin, to, deadline);
 
         // 7. 如果 V1 取回的 token 超过在 V2 中实际用掉的量，则：
         if (amountTokenV1 > amountTokenV2) {
             // 7.1 重置 approve 为 0，良好链上公民习惯
             TransferHelper.safeApprove(token, address(router), 0);
             // 7.2 退还多余的 token 给用户
-            TransferHelper.safeTransfer(
-                token,
-                msg.sender,
-                amountTokenV1 - amountTokenV2
-            );
+            TransferHelper.safeTransfer(token, msg.sender, amountTokenV1 - amountTokenV2);
         }
         // 8. 否则，如果 V1 取回的 ETH 超过在 V2 中实际用掉的量，则：
         else if (amountETHV1 > amountETHV2) {
             // 8.1 把多余的 ETH 转回给用户
-            TransferHelper.safeTransferETH(
-                msg.sender,
-                amountETHV1 - amountETHV2
-            );
+            TransferHelper.safeTransferETH(msg.sender, amountETHV1 - amountETHV2);
         }
         // 9. 如果两者都恰好用完，则无需退回任何资产
     }

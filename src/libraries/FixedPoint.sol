@@ -10,7 +10,7 @@ library FixedPoint {
 
     // 定义一个 144.112 位的定点数结构：总共 256 位，整数部分 144 位，小数部分 112 位
     struct uq144x112 {
-        uint _x;
+        uint256 _x;
     }
 
     // 小数部分的位数常量：112
@@ -38,7 +38,7 @@ library FixedPoint {
     /// @return 商；保留 112 位小数
     function div(uq112x112 memory self, uint112 x) internal pure returns (uq112x112 memory) {
         // 除数不能为零
-        require(x != 0, 'FixedPoint: DIV_BY_ZERO');
+        require(x != 0, "FixedPoint: DIV_BY_ZERO");
         // 直接用定点数内部整数除以 x
         return uq112x112(self._x / uint224(x));
     }
@@ -47,10 +47,10 @@ library FixedPoint {
     /// @param self 被乘的定点数
     /// @param y 乘数
     /// @return 结果定点数，保留 112 位小数；溢出时 revert
-    function mul(uq112x112 memory self, uint y) internal pure returns (uq144x112 memory) {
-        uint z;
+    function mul(uq112x112 memory self, uint256 y) internal pure returns (uq144x112 memory) {
+        uint256 z;
         // 检查乘法是否溢出：y 为 0 或 (self._x * y) / y == self._x
-        require(y == 0 || (z = uint(self._x) * y) / y == uint(self._x), "FixedPoint: MULTIPLICATION_OVERFLOW");
+        require(y == 0 || (z = uint256(self._x) * y) / y == uint256(self._x), "FixedPoint: MULTIPLICATION_OVERFLOW");
         // 返回新的定点数结构
         return uq144x112(z);
     }
